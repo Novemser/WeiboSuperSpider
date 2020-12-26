@@ -29,7 +29,9 @@ import os
 from datetime import datetime, timedelta
 import sys
 
-Cookie = '改成你自己的 Cookie'
+enableRetry = True
+
+Cookie = '_T_WM=17323374171; SUB=_2A25y2ZmsDeRhGeNM71sX9CzMzDSIHXVuJSfkrDV6PUJbktANLUqhkW1NTgKq0zDGXAnurTQfC6dg0aDQxjPXY82R; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFb8XCbusMP4Xm_9STrPqEF5NHD95QfeoB4SoBEehMRWs4DqcjzKJvc9gf09Pzt; SSOLoginState=1608378871'
 
 User_Agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0'
 
@@ -424,15 +426,36 @@ class WeiboTopicScrapy():
                 'sort': 'time',
                 'page': page
             }
-            res = requests.get(url='https://weibo.cn/search/mblog', params=params, headers=headers)
+            def fetch_current_page():
+                return requests.get(url='https://weibo.cn/search/mblog', params=params, headers=headers)
 
+            res = fetch_current_page()
             html = etree.HTML(res.text.encode('utf-8'))
+            print("OK! request url param:", params)
 
             try:
                 weibos = html.xpath("//div[@class='c' and @id]")
 
+                retry_cnt = 0
+                finish_content = False
+                # 自动重试
+                while len(weibos) == 0:
+                    if enableRetry:
+                        if retry_cnt < 5:
+                            sleep(5)
+                            res = fetch_current_page()
+                            retry_cnt += 1
+                            html = etree.HTML(res.text.encode('utf-8'))
+                            weibos = html.xpath("//div[@class='c' and @id]")
+                        else:
+                            finish_content = True
+                            break
+                    else:
+                        finish_content = True
+                        break
+
                 # 自动结束
-                if len(weibos) == 0:
+                if finish_content:
                     print('自动结束，大概率是因为内容爬完了，也请留意是否是 cookie 失效等情况\n')
                     break
 
@@ -494,12 +517,12 @@ def time_params_formatter(params_time, offset_day=0, offset_hour=-8):
 
 if __name__ == '__main__':
     # filter = 0 爬取所有微博，filter = 1 爬取原创微博
-    keyword = 'S10'
+    keyword = '难过'
     # 时间是从 start_time 到 end_time 这样
     # 程序是从 end_time 到 start_time 这样爬
     # end_time + 1 day + 8 hour
     # start_time + 8hour
-    start_time, end_time = '2020-10-31-04', '2020-10-31-05'
+    start_time, end_time = '2020-11-01-01', '2020-11-30-00'
     if start_time >= end_time:
         raise Exception('start_time 是离现在更远的那个时间，必须小于 end_time')
     WeiboTopicScrapy(keyword=keyword, filter=1, start_time=start_time, end_time=end_time)

@@ -29,7 +29,7 @@ from random import randint
 
 headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-    'Cookie': '''换成你自己的 cookie'''
+    'Cookie': '''_T_WM=17323374171; SUB=_2A25y2ZmsDeRhGeNM71sX9CzMzDSIHXVuJSfkrDV6PUJbktANLUqhkW1NTgKq0zDGXAnurTQfC6dg0aDQxjPXY82R; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFb8XCbusMP4Xm_9STrPqEF5NHD95QfeoB4SoBEehMRWs4DqcjzKJvc9gf09Pzt; SSOLoginState=1608378871'''
 }
 
 class WeiboCommentScrapy(Thread):
@@ -162,6 +162,42 @@ class WeiboCommentScrapy(Thread):
 
             sleep(randint(1,5))
 
-if __name__ =="__main__":
-    WeiboCommentScrapy(wid='IaYZIu0Ko')
+def represents_int(s):
+    try: 
+        int(s)
+        return True
+    except ValueError:
+        return False
 
+
+def list_wid_of_file(fileName):
+    res = set()
+    with open(fileName, 'r') as file:
+        reader = csv.reader(file, delimiter=',')
+        next(reader, None)
+        for row in reader:
+            # 只找出评论数量>0的微博进行后续处理
+            numOfComments = row[-2]
+            if represents_int(numOfComments) and int(numOfComments) > 0:
+                res.add(row[0])
+                
+    return res
+
+def list_all_comment_ids(topic_dir):
+    res = set()
+    for fileName in os.listdir(topic_dir):
+        if not fileName.endswith('csv'):
+            continue
+        wids = list_wid_of_file(os.path.join(topic_dir, fileName))
+        res = res.union(wids)
+    return res
+
+
+if __name__ =="__main__":
+    # WeiboCommentScrapy(wid='JrFXr9BW8')
+    # 抓取所有topic的id
+    res = list_all_comment_ids("./topic")
+    print('共找到', len(res), '条有评论的微博')
+    for row in res:
+        sleep(0.5)
+        WeiboCommentScrapy(wid=row)
